@@ -2,13 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa, librosa.display
 from scipy.signal import resample
-from scipy.signal.windows import hann
+from scipy.signal.windows import hamming
 import math
 
 frame = 256
 sampling_rate = 44100
 target_sample_rate = 8000
 file_path = 'voice1.wav'
+lapping_rate = 0.5
+order = 12
 
 #load data
 data, sr = librosa.load(file_path, sampling_rate)
@@ -18,83 +20,24 @@ target_size = int(len(data)*target_sample_rate/sr)
 data = resample(data, target_size)
 sr = target_sample_rate
 
-#apply OLA
-def create_overlapping_blocks(x, w, R = 0.5):
-    n = len(x)
-    nw = len(w)
-    step = math.floor(nw * (1 - R))
-    nb = math.floor((n - nw) / step) + 1
-
-    B = np.zeros((nb, nw))
-
-    for i in range(nb):
-        offset = i * step
-        B[i, :] = w * x[offset : nw + offset]
-
-        return B
-
-def add_overlapping_blocks(B, w, R = 0.5):
-    [count, nw] = X.shape
-    step = math.floor(nw * R)
-
-    n = (count-1) * step + nw
-    x = np.zeros((n, ))
-
-    for i in range(count):
-        offset = i * step
-        x[offset : nw + offset] += B[i, :]
-    return x
-
-def make_matrix_X(x, p):
-    n = len(x)
-    # [x_n, ..., x_1, 0, ..., 0]
-    xz = np.concatenate([x[::-1], np.zeros(p)])
-
-    X = np.zeros((n - 1, p))
-    for i in range(n - 1):
-        offset = n - 1 - i
-        X[i, :] = xz[offset : offset + p]
-    return X
-
-def solve_lpc(x, p, ii):
-    b = x[1:]
-
-    X = make_matrix_X(x, p)
-
-    a = np.linalg.lstsq(X, b.T, rcond=-1)[0]
-
-    e = b - np.dot(X, a)
-    g = np.var(e)
-
-    return [a, g]
-
-def lpc_encode(x, p, w):
-    B = create_overlapping_blocks(x, w)
-    [nb, nw] = B.shape
-
-    A = np.zeros((p, nb))
-    G = np.zeros((1, nb))
-
-    for i in range(nb):
-        [a, g] = solve_lpc(B[i, :], p, i)
-
-        A[:, i] = a
-        G[:, i] = g
-
-    return [A, G]
-
-
+#make hamming window
 sym = False
-window = hann((len(data)), sym)
+window = hamming(frame, sym)
 
-p = 6
-[A, G] = lpc_encode(data, p, window)
+#apply OLA
+step = math.floor(frame*lapping_rate)
+block_number = math.floor((len(data) - len(window)) / step) + 1
+framming_result = np.zeros((block_number, len(window)))
 
-print(A)
+for i in range(block_number):
+    offset = i * step
+    framming_result[i, :] = window * data[offset : len(window) + offset]
 
-A_new = librosa.lpc(data[0:frame], 5)
-
-print(A_new)
+#extract lpc coefficient
+lpc_co = np.zeros((block_number, order + 1))
+for i in range(block_number):
+    offset = i * step
+    lpc_co[i, :] = librosa.lpc(framming_result[i,:], order)
 
 
 
