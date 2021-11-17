@@ -1,13 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import librosa, librosa.display
-from scipy.signal import resample
 from scipy.signal.windows import hamming
 import math
 
 frame = 256
-sampling_rate = 44100
-target_sample_rate = 44100
+target_sample_rate = 8000
 overlapping_rate = 0.5
 order = 12
 
@@ -16,19 +14,20 @@ def extract_features(data):
     sym = False
     window = hamming(frame, sym)
 
-#when Hz is same, change zero to epsilon
-    target_size = int(len(data) * target_sample_rate / sampling_rate)
-    data = resample(data, target_size)
-    sr = target_sample_rate
-
-#apply OLA
+#apply OLA + window + remove row with zeros
+    count = 0
     step = math.floor(frame*overlapping_rate)
     block_number = math.floor((len(data) - len(window)) / step) + 1
     framing_result = np.zeros((block_number, len(window)))
 
     for i in range(block_number):
         offset = i * step
-        framing_result[i, :] = window * data[offset : len(window) + offset]
+        if np.all(data[offset: len(window) + offset] == 0):  # skip frame with zeros
+            continue
+        framing_result[count, :] = window * data[offset: len(window) + offset]
+        count = count + 1
+
+    block_number = count
 
 #extract lpc coefficient
     lpc_co = np.zeros((block_number, order + 1))
