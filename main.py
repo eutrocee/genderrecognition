@@ -82,7 +82,7 @@ for i in range(len(male_female_dtw[:, 0])):
 male_distance = male_path.sum() / len(male_path)
 male_female_distance = male_female_path.sum() / len(male_female_path)
 
-# make function, apply to another dimension and calculate multidimensional dtw distance(sum up all)
+# plan: make function, apply to another dimension and calculate multidimensional dtw distance(sum up all)
 
 # male_wp_size = np.asarray(male_wp) * frame / sampling_rate
 #
