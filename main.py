@@ -52,10 +52,10 @@ min_distance_female = min(sum(calculate_dtw_distance(input_data_co, ref_data_co_
 
 # identify speaker
 if (min_distance_male < min_distance_female) and (min_distance_male < threshold):
-    print('Speaker is male')
+    print('Speaker is male.')
     print('Distance:', min_distance_male)
 elif min_distance_female < threshold:
-    print('Speaker is female')
+    print('Speaker is female.')
     print('Distance:', min_distance_female)
 else:
     print('Cannot identify speaker!')
